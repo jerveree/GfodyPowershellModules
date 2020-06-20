@@ -34,18 +34,19 @@ public static class RunAs
 	[DllImport("kernel32")]
 	private static extern bool CloseHandle(IntPtr hObject);
 
-	private static void SplitUsername(string username, out string user, out string domain)
+	private static void ProcessUsername(string username, out string user, out string domain)
 	{
 		var parts = username.Split('\\', '@');
 		if (parts.Length == 1)
 		{
-			user = parts[0];
-			domain = Environment.UserDomainName;
+			// Assume same domain as current user for UPN
+			user = parts[0] + Environment.GetEnvironmentVariable("UserDNSDomain");
+			domain = null;
 		}
 		else if (username.Contains("@"))
 		{
-			user = parts[0];
-			domain = parts[1];
+			user = username;
+			domain = null;
 		}
 		else
 		{
@@ -76,7 +77,7 @@ public static class RunAs
 		try
 		{
 			string domain, username;
-			SplitUsername(credential.UserName, out username, out domain);
+			ProcessUsername(credential.UserName, out username, out domain);
 
 			PROCESS_INFORMATION p;
 			if (!CreateProcessWithLogonW(username, domain, credential.GetNetworkCredential().Password, logonFlags, applicationName, commandLine, creationFlags, lpEnvironment, currentDirectory, ref s, out p))
